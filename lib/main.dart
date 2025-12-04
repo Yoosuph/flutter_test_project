@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:confetti/confetti.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:fl_chart/fl_chart.dart';
+
 
 void main() {
   runApp(
@@ -657,16 +657,25 @@ class _TodoListPageState extends State<TodoListPage>
                                       SizedBox(
                                         width: 60,
                                         height: 60,
-                                        child: CircularProgressIndicator(
-                                          value: progress,
-                                          strokeWidth: 5,
-                                          backgroundColor:
-                                              Colors.white.withOpacity(0.3),
-                                          valueColor:
-                                              const AlwaysStoppedAnimation<
-                                                  Color>(
-                                            Colors.white,
-                                          ),
+                                        child: TweenAnimationBuilder<double>(
+                                          tween: Tween<double>(
+                                              begin: 0, end: progress),
+                                          duration: const Duration(
+                                              milliseconds: 500),
+                                          curve: Curves.easeInOut,
+                                          builder: (context, value, _) {
+                                            return CircularProgressIndicator(
+                                              value: value,
+                                              strokeWidth: 5,
+                                              backgroundColor: Colors.white
+                                                  .withOpacity(0.3),
+                                              valueColor:
+                                                  const AlwaysStoppedAnimation<
+                                                      Color>(
+                                                Colors.white,
+                                              ),
+                                            );
+                                          },
                                         ),
                                       ),
                                       Text(
@@ -1353,9 +1362,11 @@ class _TodoListPageState extends State<TodoListPage>
         !todo.isCompleted;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Padding(
+    return FadeInSlide(
       key: ValueKey(todo.id),
-      padding: const EdgeInsets.only(bottom: 12),
+      index: displayIndex,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
       child: Slidable(
         endActionPane: ActionPane(
           motion: const StretchMotion(),
@@ -1647,6 +1658,7 @@ class _TodoListPageState extends State<TodoListPage>
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -1836,7 +1848,7 @@ class StatisticsPage extends StatelessWidget {
       priorityData[todo.priority] = (priorityData[todo.priority] ?? 0) + 1;
     }
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+
 
     return Scaffold(
       appBar: AppBar(
@@ -2057,6 +2069,73 @@ class StatisticsPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class FadeInSlide extends StatefulWidget {
+  final Widget child;
+  final int index;
+  final Duration duration;
+
+  const FadeInSlide({
+    super.key,
+    required this.child,
+    required this.index,
+    this.duration = const Duration(milliseconds: 400),
+  });
+
+  @override
+  State<FadeInSlide> createState() => _FadeInSlideState();
+}
+
+class _FadeInSlideState extends State<FadeInSlide>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+
+    final delay = widget.index * 100;
+    Future.delayed(Duration(milliseconds: delay), () {
+      if (mounted) {
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: widget.child,
       ),
     );
   }
